@@ -177,6 +177,32 @@ def AffineLoopFusion : Pass<"affine-loop-fusion"> {
   let dependentDialects = ["memref::MemRefDialect"];
 }
 
+def AffineLoopDistribution
+    : Pass<"affine-loop-distribution"> {
+  let summary = "Distribute affine loop nests for locality and parallelism";
+  let constructor = "mlir::affine::createAffineLoopDistributionPass()";
+  let dependentDialects = ["memref::MemRefDialect"];
+  let description = [{
+    This pass performs distribution of affine loop nests. It splits a loop nest
+    into multiple loop nests by distributing the operations in the body of the
+    loop nest. The distribution is done in a way that the original semantics of
+    the program is preserved. The pass can be used to enable parallelism and
+    improve data locality.
+  }];
+  let options = [
+    Option<"MinDistributionFootprint", "min-distribution-footprint",
+            "uint64_t", /*default=*/"128",
+            "The minimum memory footprint (in bytes) that a loop must have "
+            "before it is considered profitable">,
+    Option<"distributeMayAlias", "distribute-may-alias",
+            "bool", /*default=*/"true",
+            "Allow loops to be distributed even if alias analysis returns "
+            "MayAlias and only prevent distribution when a MustAlias result "
+            "is reported">
+  ];
+  let dependentDialects = ["memref::MemRefDialect"];
+}
+
 def AffineLoopInvariantCodeMotion
     : Pass<"affine-loop-invariant-code-motion", "func::FuncOp"> {
   let summary = "Hoist loop invariant instructions outside of affine loops";

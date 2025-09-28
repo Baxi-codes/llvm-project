@@ -17,6 +17,7 @@
 #include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Pass/Pass.h"
 #include <limits>
+#include <memory>
 
 namespace mlir {
 
@@ -91,6 +92,10 @@ createLoopFusionPass(unsigned fastMemorySpace = 0,
                      uint64_t localBufSizeThreshold = 0,
                      bool maximalFusion = false,
                      enum FusionMode fusionMode = FusionMode::Greedy);
+
+// Creates a pass to perform distribution on affine loop nests.
+
+std::unique_ptr<Pass> createAffineLoopDistributionPass();
 
 /// Creates a pass to perform tiling on loop nests.
 std::unique_ptr<OperationPass<func::FuncOp>>

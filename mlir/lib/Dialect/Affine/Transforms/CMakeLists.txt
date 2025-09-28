@@ -9,6 +9,7 @@ add_mlir_dialect_library(MLIRAffineTransforms
   DecomposeAffineOps.cpp
   LoopCoalescing.cpp
   LoopFusion.cpp
+  LoopDistribution.cpp
   LoopTiling.cpp
   LoopUnroll.cpp
   LoopUnrollAndJam.cpp
