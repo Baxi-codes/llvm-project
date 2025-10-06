@@ -90,8 +90,8 @@ func.func @incorrect_distribution(%A: memref<1024xf32>, %B: memref<1024xf32>) {
   return
 }
 
-// CHECK-LABEL: func @only_distribute_inner
-func.func @only_distribute_inner(%A: memref<1024x1024xf32>, %B: memref<1024x1024xf32>, %C: memref<1024x1024xf32>) {
+// CHECK-LABEL: func @inner_distribute_1
+func.func @inner_distribute_1(%A: memref<1024x1024xf32>, %B: memref<1024x1024xf32>, %C: memref<1024x1024xf32>) {
   %c_1 = arith.constant 1.0 : f32
   affine.for %i = 0 to 1023 {
     affine.for %j = 1 to 1023 {
@@ -110,6 +110,56 @@ func.func @only_distribute_inner(%A: memref<1024x1024xf32>, %B: memref<1024x1024
   // CHECK:      affine.for %{{.*}} = 1 to 1023
   // CHECK-NEXT:     affine.load
   // CHECK-NEXT:     affine.store
+  return
+}
+
+
+// CHECK-LABEL: func @inner_distribute
+func.func @inner_distribute(%A: memref<100xf32>, %C: memref<100xf32>) {
+  // CHECK: affine.for
+  affine.for %t = 0 to 10 {
+    %B = memref.alloc() : memref<100xf32>
+    %D = memref.alloc() : memref<100xf32>
+    affine.for %i = 0 to 100 {
+      %u = affine.load %A[%i] : memref<100xf32>
+      affine.store %u, %B[%i] : memref<100xf32>
+      %v = affine.load %C[%i] : memref<100xf32>
+      affine.store %v, %D[%i] : memref<100xf32>
+    }
+    // Distributed loops.
+    // CHECK: affine.for %{{.*}} = 0 to 100
+    // CHECK-NEXT: affine.load
+    // CHECK-NEXT: affine.store
+    // CHECK: affine.for %{{.*}} = 0 to 100
+    // CHECK-NEXT: affine.load
+    // CHECK-NEXT: affine.store
+  }
+  // CHECK: return
+  return
+}
+
+// CHECK-LABEL: func @three_way_distribute
+func.func @three_way_distribute(%A: memref<100xf32>, %C: memref<100xf32>, %E: memref<100xf32>) {
+  %B = memref.alloc() : memref<100xf32>
+  %D = memref.alloc() : memref<100xf32>
+  %F = memref.alloc() : memref<100xf32>
+  affine.for %i = 0 to 100 {
+    %u = affine.load %A[%i] : memref<100xf32>
+    affine.store %u, %B[%i] : memref<100xf32>
+    %v = affine.load %C[%i] : memref<100xf32>
+    affine.store %v, %D[%i] : memref<100xf32>
+    %w = affine.load %E[%i] : memref<100xf32>
+    affine.store %w, %F[%i] : memref<100xf32>
+  }
+  // CHECK: affine.for %{{.*}} = 0 to 100
+  // CHECK-NEXT: affine.load
+  // CHECK-NEXT: affine.store
+  // CHECK: affine.for %{{.*}} = 0 to 100
+  // CHECK-NEXT: affine.load
+  // CHECK-NEXT: affine.store
+  // CHECK: affine.for %{{.*}} = 0 to 100
+  // CHECK-NEXT: affine.load
+  // CHECK-NEXT: affine.store
   return
 }
 

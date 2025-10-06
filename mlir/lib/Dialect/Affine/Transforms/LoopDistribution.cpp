@@ -194,15 +194,21 @@ bool LoopDistribution::isValidSplitPoint(AffineForOp loop,
   for (Operation *op : loop1)
     for (Value v : op->getResults())
       defsInLoop1.insert(v);
-
+  bool ssadep = false;
   for (Operation *op : loop2) {
-    for (Value operand : op->getOperands()) {
-      if (defsInLoop1.contains(operand)) {
-        LLVM_DEBUG(llvm::dbgs()
-                       << "Split invalid: loop2 depends on loop1 value ";
-                   operand.print(llvm::dbgs()); llvm::dbgs() << "\n";);
-        return false;
+    op->walk([&](Operation *nestedOp) {
+      for (Value operand : nestedOp->getOperands()) {
+        if (defsInLoop1.contains(operand)) {
+          LLVM_DEBUG(llvm::dbgs()
+                         << "Split invalid: loop2 depends on loop1 value ";
+                     operand.print(llvm::dbgs()); llvm::dbgs() << "\n";);
+          ssadep = true;
+          return;
+        }
       }
+    });
+    if (ssadep) {
+      return false;
     }
   }
 
@@ -263,14 +269,15 @@ bool LoopDistribution::isValidSplitPoint(AffineForOp loop,
 
           AffineMap map1 = access2.getAffineMap();
           AffineMap map2 = access1.getAffineMap();
+          llvm::SmallVector<Value> operands1 = access1.getMapOperands();
+          llvm::SmallVector<Value> operands2 = access2.getMapOperands();
+          fullyComposeAffineMapAndOperands(&map1, &operands1);
           if (!isShiftedIdentity(map1) || !isShiftedIdentity(map2)) {
             LLVM_DEBUG(llvm::dbgs()
                            << "Non-shifted-identity map -> cannot split\n";);
             return false;
           }
 
-          auto operands1 = access2.getMapOperands();
-          auto operands2 = access1.getMapOperands();
           if (!llvm::is_contained(operands1, indVar) ||
               !llvm::is_contained(operands2, indVar)) {
             LLVM_DEBUG(llvm::dbgs() << "No dependency as " << indVar
@@ -328,11 +335,12 @@ bool LoopDistribution::isValidSplitPoint(AffineForOp loop,
 
           AffineMap map1 = access1.getAffineMap();
           AffineMap map2 = access2.getAffineMap();
+          llvm::SmallVector<Value> operands1 = access1.getMapOperands();
+          llvm::SmallVector<Value> operands2 = access2.getMapOperands();
+          fullyComposeAffineMapAndOperands(&map1, &operands1);
           if (!isShiftedIdentity(map1) || !isShiftedIdentity(map2))
             return false;
 
-          auto operands1 = access1.getMapOperands();
-          auto operands2 = access2.getMapOperands();
           if (!llvm::is_contained(operands1, indVar) ||
               !llvm::is_contained(operands2, indVar)) {
             LLVM_DEBUG(llvm::dbgs() << "No dependency as " << indVar
@@ -391,11 +399,12 @@ bool LoopDistribution::isValidSplitPoint(AffineForOp loop,
 
           AffineMap map1 = access1.getAffineMap();
           AffineMap map2 = access2.getAffineMap();
+          llvm::SmallVector<Value> operands1 = access1.getMapOperands();
+          llvm::SmallVector<Value> operands2 = access2.getMapOperands();
+          fullyComposeAffineMapAndOperands(&map1, &operands1);
           if (!isShiftedIdentity(map1) || !isShiftedIdentity(map2))
             return false;
 
-          auto operands1 = access1.getMapOperands();
-          auto operands2 = access2.getMapOperands();
           if (!llvm::is_contained(operands1, indVar) ||
               !llvm::is_contained(operands2, indVar)) {
             LLVM_DEBUG(llvm::dbgs() << "No dependency as " << indVar
